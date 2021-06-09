@@ -11,14 +11,14 @@
         max="5"
         step="0.01"
       /> -->
-      OffsetY {{offsetY}} ScaleX {{ scaleX }}
+      Offset ({{offsetX}} | {{offsetY}}) ScaleX {{ scaleX }}
       <!-- <input :value="scaleY" @input="scaleY = Number($event.target.value)" type="range" min="0" max="2" step="0.01"> -->
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, onMounted, watchEffect } from "vue";
+import { ref, defineComponent, onUpdated, onMounted,  watchEffect } from "vue";
 import { coordSystem } from "./CoordSystem";
 import { mouseMove } from "./MouseMove";
 export default defineComponent({
@@ -41,8 +41,16 @@ export default defineComponent({
     } = coordSystem(element);
 
     watchEffect(() => {
-      render();
+      render()
     });
+
+    onUpdated(() => {
+      render()
+    })
+
+    onMounted(() => {
+      render()
+    })
 
     mouseMove(element, offsetX, offsetY, scaleX, width, height);
 
@@ -54,9 +62,11 @@ export default defineComponent({
 <style scoped>
 .tools {
   position: absolute;
+  background-color: rgba(255, 255,255, 0.7);
   top: 0;
   left: 0;
-  width: 50%;
+  padding: 5px;
+  /* width: 100%; */
 }
 
 .scale {

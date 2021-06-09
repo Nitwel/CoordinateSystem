@@ -1,15 +1,19 @@
-import { Ref, onMounted } from 'vue'
+import { Ref, onMounted, ref } from 'vue'
 
 export function mouseMove(element: Ref<HTMLCanvasElement | undefined>,offsetX: Ref<number>, offsetY: Ref<number>, scaleX: Ref<number>, width: Ref<number>, height: Ref<number>) {
 
     let downPositions = {x: 0, y: 0}
-    const zoomStrength = 2
+    const zoomStrength = ref(1.1)
+    const strgPressed = ref(false)
+    const altPressed = ref(false)
 
     onMounted(() => {
 
         document.addEventListener('mousedown', mouseDown)
         document.addEventListener('mouseup', mouseUp)
         document.addEventListener('wheel', wheel)
+        document.addEventListener('keydown', keydown)
+        document.addEventListener('keyup', keyup)
     })
 
     function mouseDown(event: MouseEvent) {
@@ -30,15 +34,26 @@ export function mouseMove(element: Ref<HTMLCanvasElement | undefined>,offsetX: R
 
     function wheel(event: WheelEvent) {
         if(event.deltaY <= 0) {
-            offsetX.value -= (event.clientX - width.value / 2) - offsetX.value
-            offsetY.value -= (event.clientY - height.value / 2) - offsetY.value
-            scaleX.value *= zoomStrength
+            offsetX.value -= ((event.clientX - width.value / 2) - offsetX.value) * (zoomStrength.value - 1)
+            offsetY.value -= ((event.clientY - height.value / 2) - offsetY.value)  * (zoomStrength.value - 1)
+            scaleX.value *= zoomStrength.value
         } else {
-            offsetY.value += ((event.clientY - height.value / 2) - offsetY.value) / zoomStrength
-            offsetX.value += ((event.clientX - width.value / 2) - offsetX.value) / zoomStrength
-            scaleX.value /= zoomStrength
+            offsetY.value += (((event.clientY - height.value / 2) - offsetY.value) / zoomStrength.value) * (zoomStrength.value - 1)
+            offsetX.value += (((event.clientX - width.value / 2) - offsetX.value) / zoomStrength.value) * (zoomStrength.value - 1)
+            scaleX.value /= zoomStrength.value
         }
     }
 
-    return {}
+    function keydown(event: KeyboardEvent) {
+        strgPressed.value = event.ctrlKey
+        zoomStrength.value = event.shiftKey ? 2 : 1.1
+        altPressed.value = event.altKey
+    }
+
+    function keyup(event: KeyboardEvent) {
+        strgPressed.value = event.ctrlKey
+        altPressed.value = event.altKey
+    }
+
+    return {strgPressed, altPressed}
 }

@@ -28,7 +28,7 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
     const height = ref(0)
     const offsetX = ref(0)
     const offsetY = ref(0)
-    const scaleX = ref(1)
+    const scaleX = ref(150)
     const scaleY = ref(1)
     const canvas = ref<CanvasRenderingContext2D>()
 
@@ -48,7 +48,7 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         canvas.value.clearRect(0, 0, width.value, height.value)
         drawGrid()
         canvas.value.strokeStyle = "#000000"
-        drawFunction(x => Math.cos(x / 100) * 100)
+        drawFunction(x => Math.cos(x))
     }
 
     function drawLines(...points: Point[] | { x: number, y: number }[]) {
