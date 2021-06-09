@@ -21,23 +21,23 @@ export class Point {
 export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
 
     const gpu = new GPU()
-    const gridLines = 5;
-    const gridSpace = 10
+    const gridLines = 4;
+    const gridSpace = 8
 
     const width = ref(0)
     const height = ref(0)
     const offsetX = ref(0)
     const offsetY = ref(0)
     const scaleX = ref(150)
-    const scaleY = ref(1)
+    const scaleY = ref(150)
     const canvas = ref<CanvasRenderingContext2D>()
 
 
     onMounted(() => {
         if (!element.value) return
         canvas.value = element.value.getContext("2d") || undefined
-        element.value.width = window.innerWidth - 20
-        element.value.height = window.innerHeight - 20
+        element.value.width = window.innerWidth
+        element.value.height = window.innerHeight
 
         width.value = element.value.width
         height.value = element.value.height
@@ -58,7 +58,7 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         let first = true
         for (const point of points) {
             const x = point.x * scaleX.value + offsetX.value + width.value / 2
-            const y = -point.y * scaleX.value + offsetY.value + height.value / 2
+            const y = -point.y * scaleY.value + offsetY.value + height.value / 2
             if (first) {
                 canvas.value.moveTo(x, y)
                 first = false
@@ -81,7 +81,7 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         if (!canvas.value) return
         translatePoints.setOutput([2, xList.length])
 
-        const xyPoints = translatePoints([xList, yList], scaleX.value, scaleX.value, offsetX.value, offsetY.value, width.value, height.value) as Float32Array[]
+        const xyPoints = translatePoints([xList, yList], scaleX.value, scaleY.value, offsetX.value, offsetY.value, width.value, height.value) as Float32Array[]
         canvas.value.beginPath()
         let first = true
         for (let point of xyPoints) {
@@ -174,22 +174,26 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         return (y1 - y0) / (x1 - x0)
     }
 
-    function roundPrecision(number: number, precision: number) {
-        return Math.floor(number * precision * 10) / (precision * 10)
+    function roundPrecision(number: number, precision: number = 2) {
+        return Math.round(number * Math.pow(10, precision)) / Math.pow(10, precision)
     }
 
     function drawGrid() {
         if (!canvas.value) return
 
-        const scale = findScale(scaleX.value)
+        const xScale = findScale(scaleX.value)
+        const yScale = findScale(scaleY.value)
+        canvas.value.font = "14px Arial"
 
-        let xSpace = gridSpace * scale
-        let ySpace = gridSpace * scale
+        let xSpace = gridSpace * xScale
+        let ySpace = gridSpace * yScale
 
         const xLines = Math.ceil(width.value / 2 / xSpace)
         const yLines = Math.ceil(height.value / 2 / ySpace)
 
         const middleIndex = offsetX.value >= 0? Math.floor(offsetX.value / xSpace) : Math.ceil(offsetX.value / xSpace)
+
+        let lineType: 'axis' | 'thick' | 'thin'
 
         for (let i = -xLines; i <= xLines; i++) {
             let xLine = width.value / 2 + (i * xSpace)
@@ -198,12 +202,14 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
             
             canvas.value.beginPath()
             if(i === middleIndex) {
+                lineType = "axis"
                 canvas.value.strokeStyle = "#000000"
             } else if(Math.abs(i - middleIndex) % gridLines === 0) {
-                canvas.value.strokeStyle = "#AAAAAA"
-                canvas.value.fillText(String(Math.round((xLine - offsetX.value - width.value / 2 -0.5) / scaleX.value)), xLine, 10)
+                lineType = "thick"
+                canvas.value.strokeStyle = "#AAAAAA"  
             } else {
-                canvas.value.globalAlpha = (scale - 1) / (gridLines - 1)
+                lineType = "thin"
+                canvas.value.globalAlpha = (xScale - 1) / (gridLines - 1)
                 canvas.value.strokeStyle = `#AAAAAA`
             }
             
@@ -211,6 +217,16 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
             canvas.value.lineTo(xLine, height.value)
             canvas.value.stroke()
             canvas.value.globalAlpha = 1
+
+            if(lineType === 'thick') {
+                const linePosition = (xLine - offsetX.value - width.value / 2 -0.5) / scaleX.value
+                canvas.value.strokeStyle ="#ffffff"
+                canvas.value.lineWidth = 4
+                canvas.value.strokeText(String(roundPrecision(linePosition, 5)), xLine - 2, 14, 200)
+                canvas.value.strokeStyle ="#000000"
+                canvas.value.lineWidth = 1
+                canvas.value.fillText(String(roundPrecision(linePosition, 5)), xLine - 2, 14, 200)
+            }
             
         }
 
@@ -224,22 +240,34 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
             canvas.value.beginPath()
             if(i === middleIndex) {
                 canvas.value.strokeStyle = "#000000"
+                lineType = 'axis'
             } else if(Math.abs(i - middleIndex ) % gridLines === 0) {
+                lineType = 'thick'
                 canvas.value.strokeStyle = "#AAAAAA"
-                canvas.value.fillText(String(-Math.round((yLine - offsetY.value - height.value / 2 -0.5) / scaleX.value)), 10, yLine - 2)
             } else {
-                canvas.value.globalAlpha = (scale - 1) / (gridLines - 1)
+                lineType = 'thin'
+                canvas.value.globalAlpha = (yScale - 1) / (gridLines - 1)
                 canvas.value.strokeStyle = `#AAAAAA`
             }
             canvas.value.moveTo(0, yLine)
             canvas.value.lineTo(width.value, yLine)
             canvas.value.stroke()
             canvas.value.globalAlpha = 1
+
+            if(lineType === 'thick') {
+                const linePosition = -(yLine - offsetY.value - height.value / 2 -0.5) / scaleY.value
+                canvas.value.strokeStyle ="#ffffff"
+                canvas.value.lineWidth = 4
+                canvas.value.strokeText(String(roundPrecision(linePosition, 5)), 5, yLine + 5)
+                canvas.value.strokeStyle ="#000000"
+                canvas.value.lineWidth = 1
+                canvas.value.fillText(String(roundPrecision(linePosition, 5)), 5, yLine + 5)
+            }
             
         }
 
 
     }
 
-    return { drawGrid, render, offsetX, offsetY, scaleX, scaleY, drawLines, canvas, width, height, drawFunction, drawFunctionGPU }
+    return { drawGrid, render, offsetX, offsetY, scaleX, scaleY, drawLines, canvas, width, height, drawFunction, drawFunctionGPU, roundPrecision }
 }
