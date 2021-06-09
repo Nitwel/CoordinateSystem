@@ -1,8 +1,9 @@
 import { Ref, onMounted } from 'vue'
 
-export function mouseMove(element: Ref<HTMLCanvasElement | undefined>,offsetX: Ref<number>, offsetY: Ref<number>, scaleX: Ref<number>) {
+export function mouseMove(element: Ref<HTMLCanvasElement | undefined>,offsetX: Ref<number>, offsetY: Ref<number>, scaleX: Ref<number>, width: Ref<number>, height: Ref<number>) {
 
     let downPositions = {x: 0, y: 0}
+    const zoomStrength = 2
 
     onMounted(() => {
 
@@ -28,11 +29,14 @@ export function mouseMove(element: Ref<HTMLCanvasElement | undefined>,offsetX: R
     }
 
     function wheel(event: WheelEvent) {
-        console.log(event.deltaY)
-        if(event.deltaY > 0) {
-            scaleX.value *= 1.05
+        if(event.deltaY <= 0) {
+            offsetX.value -= (event.clientX - width.value / 2) - offsetX.value
+            offsetY.value -= (event.clientY - height.value / 2) - offsetY.value
+            scaleX.value *= zoomStrength
         } else {
-            scaleX.value /= 1.05
+            offsetY.value += ((event.clientY - height.value / 2) - offsetY.value) / zoomStrength
+            offsetX.value += ((event.clientX - width.value / 2) - offsetX.value) / zoomStrength
+            scaleX.value /= zoomStrength
         }
     }
 

@@ -2,7 +2,7 @@
   <div>
     <canvas ref="element" width="600" height="600"></canvas>
     <div class="tools">
-      <input
+      <!-- <input
         class="scale"
         :value="scaleX"
         @input="scaleX = Number($event.target.value)"
@@ -10,8 +10,8 @@
         min="0.01"
         max="5"
         step="0.01"
-      />
-      {{ scaleX }}
+      /> -->
+      OffsetY {{offsetY}} ScaleX {{ scaleX }}
       <!-- <input :value="scaleY" @input="scaleY = Number($event.target.value)" type="range" min="0" max="2" step="0.01"> -->
     </div>
   </div>
@@ -44,7 +44,7 @@ export default defineComponent({
       render();
     });
 
-    mouseMove(element, offsetX, offsetY, scaleX);
+    mouseMove(element, offsetX, offsetY, scaleX, width, height);
 
     return { element, width, height, offsetX, offsetY, scaleX, scaleY };
   },

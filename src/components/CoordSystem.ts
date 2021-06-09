@@ -1,6 +1,5 @@
 import { GPU } from "gpu.js"
 import { h, onMounted, ref, Ref } from "vue"
-
 export class Point {
     x: number
     y: number
@@ -22,6 +21,8 @@ export class Point {
 export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
 
     const gpu = new GPU()
+    const gridLines = 5;
+    const gridSpace = 10
 
     const width = ref(0)
     const height = ref(0)
@@ -43,16 +44,11 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
     })
 
     function render() {
-        canvas.value?.clearRect(0, 0, width.value, height.value)
+        if(!canvas.value) return
+        canvas.value.clearRect(0, 0, width.value, height.value)
         drawGrid()
-        // drawFunction(x => Math.cos(x / 100) * 100)
-        // drawFunction(x => Math.cos(x / 100 + 0.2) * 100)
-        // drawFunction(x => Math.cos(x / 100 + 0.4) * 100)
-        // drawFunction(x => Math.cos(x / 100 + 0.6) * 100)
-        drawFunctionGPU(x => 0)
-        drawFunctionGPU(x => 0.2)
-        drawFunctionGPU(x => 0.4)
-        drawFunctionGPU(x => 0.6)
+        canvas.value.strokeStyle = "#000000"
+        drawFunction(x => Math.cos(x / 100) * 100)
     }
 
     function drawLines(...points: Point[] | { x: number, y: number }[]) {
@@ -124,15 +120,14 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
 
     function findScale(scale: number) {
         let i = 0
-        const limit = 4
         let targetScale = scale
 
         while (true) {
-            if (targetScale >= limit) {
-                targetScale /= limit
+            if (targetScale >= gridLines) {
+                targetScale /= gridLines
                 i += 1
             } else if (targetScale < 1) {
-                targetScale *= limit
+                targetScale *= gridLines
                 i -= 1
             } else {
                 break
@@ -150,7 +145,6 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         for (let x = min; x <= max; x += 1 / scaleX.value) {
             points.push({ x, y: f(x) })
         }
-        canvas.value.strokeStyle = '#000000'
         drawLines(...points)
     }
 
@@ -173,7 +167,6 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         calculateY.setOutput([xValues.length])
         const yValues = calculateY(xValues, f(0)) as number[]
 
-        canvas.value.strokeStyle = '#000000'
         drawLines2(xValues, yValues)
     }
 
@@ -181,11 +174,17 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         return (y1 - y0) / (x1 - x0)
     }
 
+    function roundPrecision(number: number, precision: number) {
+        return Math.floor(number * precision * 10) / (precision * 10)
+    }
+
     function drawGrid() {
         if (!canvas.value) return
 
-        let xSpace = 50 * findScale(scaleX.value)
-        let ySpace = 50 * findScale(scaleX.value)
+        const scale = findScale(scaleX.value)
+
+        let xSpace = gridSpace * scale
+        let ySpace = gridSpace * scale
 
         const xLines = Math.ceil(width.value / 2 / xSpace)
         const yLines = Math.ceil(height.value / 2 / ySpace)
@@ -198,11 +197,21 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
             xLine += offsetX.value % xSpace
             
             canvas.value.beginPath()
-            canvas.value.strokeStyle = i === middleIndex? '#000000' : '#AAAAAA'
+            if(i === middleIndex) {
+                canvas.value.strokeStyle = "#000000"
+            } else if(Math.abs(i - middleIndex) % gridLines === 0) {
+                canvas.value.strokeStyle = "#AAAAAA"
+                canvas.value.fillText(String(Math.round((xLine - offsetX.value - width.value / 2 -0.5) / scaleX.value)), xLine, 10)
+            } else {
+                canvas.value.globalAlpha = (scale - 1) / (gridLines - 1)
+                canvas.value.strokeStyle = `#AAAAAA`
+            }
+            
             canvas.value.moveTo(xLine, 0)
             canvas.value.lineTo(xLine, height.value)
             canvas.value.stroke()
-            canvas.value.fillText(String(Math.round((xLine - offsetX.value - width.value / 2 -0.5 )/ scaleX.value) ), xLine, 10)
+            canvas.value.globalAlpha = 1
+            
         }
 
         for (let i = -yLines; i <= yLines; i++) {
@@ -213,12 +222,20 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
             const middleIndex = offsetY.value >= 0? Math.floor(offsetY.value / ySpace) : Math.ceil(offsetY.value / ySpace)
 
             canvas.value.beginPath()
-            canvas.value.strokeStyle = i === middleIndex ? '#000000' : '#AAAAAA'
+            if(i === middleIndex) {
+                canvas.value.strokeStyle = "#000000"
+            } else if(Math.abs(i - middleIndex ) % gridLines === 0) {
+                canvas.value.strokeStyle = "#AAAAAA"
+                canvas.value.fillText(String(-Math.round((yLine - offsetY.value - height.value / 2 -0.5) / scaleX.value)), 10, yLine - 2)
+            } else {
+                canvas.value.globalAlpha = (scale - 1) / (gridLines - 1)
+                canvas.value.strokeStyle = `#AAAAAA`
+            }
             canvas.value.moveTo(0, yLine)
             canvas.value.lineTo(width.value, yLine)
             canvas.value.stroke()
-            canvas.value.beginPath()
-            canvas.value.fillText(String(-Math.round((yLine - offsetY.value - height.value / 2 -0.5) / scaleX.value)), 10, yLine - 2)
+            canvas.value.globalAlpha = 1
+            
         }
 
 
