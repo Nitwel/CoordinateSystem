@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "gpu.js": "^2.11.3",
+    "mathjs": "^9.4.2",
     "vue": "^3.0.5"
   },
   "devDependencies": {

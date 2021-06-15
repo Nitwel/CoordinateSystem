@@ -22,14 +22,15 @@
 
 <script lang="ts">
 import { ref, defineComponent, onUpdated, onMounted,  watchEffect, watch } from "vue";
-import { coordSystem } from "./CoordSystem";
+import { coordSystem, Point } from "./CoordSystem";
 import { mouseMove } from "./MouseMove";
+import {compile, derivative, evaluate, log, parse, simplify} from 'mathjs'
 export default defineComponent({
   name: "HelloWorld",
   props: {},
   setup: () => {
     const element = ref<HTMLCanvasElement>();
-    const executeText = ref("x")
+    const executeText = ref("f(x) = a*x*x where a = 4")
     const {
       render,
       scaleX,
@@ -41,27 +42,55 @@ export default defineComponent({
       height,
       roundPrecision,
       drawFunction,
-      drawFunctionGPU
+      drawFunctionGPU,
+      drawLines
     } = coordSystem(element);
 
-    watchEffect(() => {
-      render()
-      renderText()
-    });
+    watchEffect(update);
 
-    onUpdated(() => {
-      render()
-      renderText()
-    })
+    onUpdated(update)
 
-    onMounted(() => {
+    onMounted(update)
+
+    function update() {
       render()
       renderText()
-    })
+
+      const points: {x: number, y: number}[] = []
+
+      
+    }
 
     function renderText() {
       try {
-        drawFunction(new Function("x", "return " + executeText.value) as any)
+        executeText.value.split('\n').forEach((line) => {
+          const result = /^.*?\((.*?)\)\s*?=\s*?(.*?)(where(.*?))?$/.exec(line)
+          if(!result || result.length < 3) return
+          const params = result[1].split(',')
+          const expression = result[2]
+          
+          const scope: Record<string, number> = {}
+          params.forEach(v => {scope[v] = 1})
+
+          if(result.length === 5 && result[4] !== undefined) {
+            const constants = result[4].split(',')
+            for(let constant of constants) {
+              const match = /^(.*?)=(.*?)$/.exec(constant)
+              if(!match || match.length < 3) continue;
+
+              const name = match[1].trim();
+              const value = parseInt(match[2])
+              scope[name] = value
+            }
+          }
+          
+          const c = compile(expression)
+
+          drawFunction((x) => {
+            scope[params[0]] = x
+            return c.evaluate(scope)
+          });
+        })
       } catch (error) {
       }
     }
@@ -96,7 +125,7 @@ export default defineComponent({
   position: absolute;
   bottom: 10px;
   right: 10px;
-  width: 40vw;
+  width: 30vw;
   height: 60px;
   padding: 10px;
 }

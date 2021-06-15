@@ -16,6 +16,19 @@ export class Point {
     angleTo(x1: number, y1: number) {
         return (this.y - y1) / (this.x - x1)
     }
+
+    getPolar() {
+        return {r: Math.sqrt(this.x * this.x +  this.y * this.y), angle: Math.atan2(this.y, this.x)}
+    }
+
+    scale(x: number, y: number) {
+        this.x *= x;
+        this.y *= y;
+    }
+
+    static fromPolar(radius: number, angle: number) {
+        return new Point(radius * Math.cos(angle), radius * Math.sin(angle))
+    }
 }
 
 export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
@@ -48,17 +61,16 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
         canvas.value.clearRect(0, 0, width.value, height.value)
         drawGrid()
         canvas.value.strokeStyle = "#000000"
-        drawFunction(x => Math.cos(x))
     }
 
-    function drawLines(...points: Point[] | { x: number, y: number }[]) {
+    function drawLines(...points: Point[]) {
         if (!canvas.value) return
 
         canvas.value.beginPath()
         let first = true
         for (const point of points) {
-            const x = point.x * scaleX.value + offsetX.value + width.value / 2
-            const y = -point.y * scaleY.value + offsetY.value + height.value / 2
+            const {x, y} = transformPoint(point)
+
             if (first) {
                 canvas.value.moveTo(x, y)
                 first = false
@@ -67,6 +79,31 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
 
         }
         canvas.value.stroke()
+    }
+
+    function drawSquares(...points: Point[]) {
+        if (!canvas.value) return
+        const {x: cx, y: cy} = transformPoint(new Point(0, 0))
+
+        for (const point of points) {
+            const {x, y} = transformPoint(point)
+
+            canvas.value.fillRect(cx, cy, x - cx, y - cy);
+
+        }
+    }
+
+    function drawLine(start: Point, end: Point) {
+        const startTransformed = transformPoint(start)
+        const endTransformed = transformPoint(end)
+        canvas.value?.moveTo(startTransformed.x, startTransformed.y)
+        canvas.value?.lineTo(endTransformed.x, endTransformed.y)
+    }
+
+    function transformPoint(point: Point) {
+        const x = point.x * scaleX.value + offsetX.value + width.value / 2
+        const y = -point.y * scaleY.value + offsetY.value + height.value / 2
+        return new Point(x, y)
     }
 
     const translatePoints = gpu.createKernel(function(xy: number[][], scaleX: number, scaleY: number, offsetX: number, offsetY: number, width: number, height: number) {
@@ -138,12 +175,12 @@ export function coordSystem(element: Ref<HTMLCanvasElement | undefined>) {
 
     function drawFunction(f: (x: number) => number) {
         if (!canvas.value) return
-        const points: { x: number, y: number }[] = []
+        const points: Point[] = []
         const min = (-offsetX.value - width.value / 2) / scaleX.value
         const max = (-offsetX.value + width.value / 2) / scaleX.value
 
         for (let x = min; x <= max; x += 1 / scaleX.value) {
-            points.push({ x, y: f(x) })
+            points.push(new Point(x, f(x)))
         }
         drawLines(...points)
     }
